@@ -9,10 +9,12 @@ Five phases, each with a shippable artifact. Nothing is wasted — every phase f
 
 ### 1. Ingest existing datasets
 
+See [DATA_SOURCES.md](./DATA_SOURCES.md) for full details, download links, and integration notes on all three sources.
+
 ```
-ViCoS Lab (120k images, 18 classes)
-  + HuggingFace BJJ_Positions_Submissions
-  + tk1475 pipeline as reference implementation
+ViCoS Lab (120k images, 18 classes)           ← anchor training set
+  + carlosj934/BJJ_Positions_Submissions       ← adds video clips for Phase 1
+  + tk1475/BJJ-Pose-Estimation (97% baseline) ← reference pipeline to fork
        ↓
 Unified format: COCO keypoints + position label + athlete bounding boxes
 ```
