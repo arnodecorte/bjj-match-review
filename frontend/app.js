@@ -160,12 +160,12 @@ async function poll() {
     if (!res.ok) return;
     const data = await res.json();
 
-    const p = data.progress || 0;
-    progressBar.style.width = p + "%";
-    progressLabel.textContent = p + "%";
+    const progress = data.progress || 0;
+    progressBar.style.width = progress + "%";
+    progressLabel.textContent = progress + "%";
     const statusMessages = {
       queued:     "Queued — waiting for worker…",
-      processing: `Processing video (${p}%)…`,
+      processing: `Processing video (${progress}%)…`,
       done:       "Done!",
       error:      "Error: " + (data.error || "unknown"),
     };
@@ -417,12 +417,13 @@ function drawDebugOverlay(entry) {
   // --- Heuristic debug info panel ---
   const d = entry.debug;
   if (d) {
+    const fmtNum = (v, dec) => (v !== null && v !== undefined) ? v.toFixed(dec) : "—";
     const lines = [];
-    lines.push(`<span class="debug-athlete-a1">A1</span> orient: ${d.orient_a1 !== null && d.orient_a1 !== undefined ? d.orient_a1.toFixed(1) : "—"}°`);
-    lines.push(`<span class="debug-athlete-a2">A2</span> orient: ${d.orient_a2 !== null && d.orient_a2 !== undefined ? d.orient_a2.toFixed(1) : "—"}°`);
-    lines.push(`IoU: ${d.iou !== null && d.iou !== undefined ? d.iou.toFixed(3) : "—"}`);
+    lines.push(`<span class="debug-athlete-a1">A1</span> orient: ${fmtNum(d.orient_a1, 1)}°`);
+    lines.push(`<span class="debug-athlete-a2">A2</span> orient: ${fmtNum(d.orient_a2, 1)}°`);
+    lines.push(`IoU: ${fmtNum(d.iou, 3)}`);
     if (d.norm_hip_diff !== null && d.norm_hip_diff !== undefined) {
-      lines.push(`Δhip/h: ${d.norm_hip_diff.toFixed(3)}`);
+      lines.push(`Δhip/h: ${fmtNum(d.norm_hip_diff, 3)}`);
     }
     if (d.rule) {
       lines.push(`<span class="debug-rule">${escapeHtml(d.rule)}</span>`);

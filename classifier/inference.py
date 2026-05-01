@@ -151,7 +151,6 @@ def heuristic_classify(
     # --- SIDE CONTROL / TURTLE (moderate separation) ---
     if abs(norm_diff) > 0.20:
         # Check compactness of bottom athlete (turtle = very compact)
-        bottom_kps = kps1 if not a1_on_top else kps2  # noqa: F841
         compactness = (box1[2] - box1[0]) / (box1[3] - box1[1] + 1e-6)
         if a1_on_top:
             compactness = (box2[2] - box2[0]) / (box2[3] - box2[1] + 1e-6)
