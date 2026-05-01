@@ -1,0 +1,310 @@
+/* ============================================================
+   BJJ Match Review — styles.css
+   Dark theme inspired by chess.com's analysis interface.
+   ============================================================ */
+
+/* ---- Reset & base ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0f1117;
+  --surface:     #1a1d27;
+  --surface-2:   #242838;
+  --border:      #2e3247;
+  --text:        #e2e5f0;
+  --text-muted:  #8b91a8;
+  --accent:      #f0c040;
+  --accent-dim:  #c49c2a;
+  --danger:      #e05555;
+  --radius:      10px;
+  --shadow:      0 4px 24px rgba(0,0,0,.45);
+  --transition:  .2s ease;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- Header ---- */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: .85rem 1.5rem;
+}
+.header-inner { max-width: 960px; margin: 0 auto; }
+.logo { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.logo-icon { font-size: 1.5rem; }
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  color: var(--text);
+}
+.logo-tag {
+  font-size: .72rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: .4rem;
+}
+
+/* ---- Main layout ---- */
+.main {
+  flex: 1;
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ---- Cards ---- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+.card-subtitle {
+  color: var(--text-muted);
+  font-size: .93rem;
+  margin-bottom: 1.5rem;
+  max-width: 580px;
+}
+
+/* ---- Drop zone ---- */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  margin-bottom: 1rem;
+}
+.drop-zone:hover, .drop-zone.dragging {
+  border-color: var(--accent);
+  background: rgba(240,192,64,.05);
+}
+.drop-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+.drop-primary { font-weight: 600; margin-bottom: .3rem; }
+.drop-secondary { font-size: .85rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+/* ---- File info ---- */
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .6rem 1rem;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+}
+.file-info span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .93rem;
+  font-weight: 600;
+  padding: .55rem 1.2rem;
+  transition: opacity var(--transition), background var(--transition);
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary  { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.btn-primary:hover:not(:disabled) { background: var(--border); }
+.btn-accent   { background: var(--accent); color: #111; width: 100%; padding: .75rem; font-size: 1rem; }
+.btn-accent:hover:not(:disabled) { background: var(--accent-dim); }
+.btn-sm       { font-size: .8rem; padding: .3rem .75rem; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ---- Progress ---- */
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.2rem 0 .75rem;
+}
+.progress-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width .4s ease;
+}
+.progress-label { font-size: .85rem; color: var(--text-muted); min-width: 2.5rem; text-align: right; }
+.status-message { color: var(--text-muted); font-size: .9rem; }
+.hint { margin-top: 1rem; font-size: .8rem; color: var(--text-muted); font-style: italic; }
+
+/* ---- Model banner ---- */
+.model-banner {
+  padding: .6rem 1rem;
+  border-radius: 6px;
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: .5rem;
+}
+.model-banner.heuristic {
+  background: rgba(240,192,64,.12);
+  border: 1px solid rgba(240,192,64,.3);
+  color: var(--accent);
+}
+.model-banner.mlp {
+  background: rgba(76,175,80,.12);
+  border: 1px solid rgba(76,175,80,.3);
+  color: #81c784;
+}
+
+/* ---- Video ---- */
+.video-card { padding: 1rem; }
+.video-wrap { position: relative; display: inline-block; width: 100%; }
+.video-player {
+  width: 100%;
+  border-radius: 6px;
+  background: #000;
+  display: block;
+  max-height: 540px;
+}
+.pos-overlay {
+  position: absolute;
+  top: .75rem;
+  left: .75rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem .8rem;
+  border-radius: 6px;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+.overlay-label { font-weight: 700; font-size: 1rem; color: #fff; }
+.overlay-conf  { font-size: .8rem; color: rgba(255,255,255,.7); }
+
+/* ---- Timeline ---- */
+.section-title { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; }
+.timeline {
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.timeline-segment {
+  height: 100%;
+  transition: filter .15s;
+}
+.timeline-segment:hover { filter: brightness(1.3); }
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem .9rem;
+  margin-top: .75rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- Log table ---- */
+.table-wrap { overflow-x: auto; }
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+}
+.log-table th {
+  text-align: left;
+  padding: .5rem .75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.log-table td {
+  padding: .45rem .75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tr.active-row { background: rgba(240,192,64,.08); }
+.conf-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.conf-bar-bg {
+  width: 80px;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.conf-bar-fill { height: 100%; border-radius: 3px; }
+.conf-pct { font-size: .78rem; color: var(--text-muted); }
+.pos-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ---- Center row ---- */
+.center-row { text-align: center; margin-top: .5rem; }
+
+/* ---- Footer ---- */
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: .8rem;
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+}
+
+/* ---- Utility ---- */
+.hidden { display: none !important; }

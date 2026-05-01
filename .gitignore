@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Models (download separately)
+models/*.pt
+models/*.pth
+models/*.ckpt
+
+# Data (download separately)
+data/vicos/
+data/raw/
+
+# Upload temp dir
+/tmp/bjj_jobs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
