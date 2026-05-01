@@ -182,10 +182,11 @@ class PositionInference:
                 self._classifier = PositionClassifier.load(model_path, device)
                 self._using_heuristic = False
                 logger.info("Loaded trained classifier from %s", model_path)
-            except Exception as exc:  # noqa: BLE001
+            except (OSError, RuntimeError, KeyError) as exc:
                 logger.warning(
-                    "Could not load model from %s (%s). Falling back to heuristic.",
+                    "Could not load model from %s (%s: %s). Falling back to heuristic.",
                     model_path,
+                    type(exc).__name__,
                     exc,
                 )
         else:

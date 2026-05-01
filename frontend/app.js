@@ -141,12 +141,13 @@ async function poll() {
     const pct = data.progress || 0;
     progressBar.style.width = pct + "%";
     progressLabel.textContent = pct + "%";
-    statusMessage.textContent = {
+    const statusMessages = {
       queued:     "Queued — waiting for worker…",
       processing: `Processing video (${pct}%)…`,
       done:       "Done!",
       error:      "Error: " + (data.error || "unknown"),
-    }[data.status] || data.status;
+    };
+    statusMessage.textContent = statusMessages[data.status] ?? `Status: ${data.status}`;
 
     if (data.status === "done") {
       clearInterval(pollTimer);

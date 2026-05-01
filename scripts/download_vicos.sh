@@ -11,6 +11,8 @@
 set -euo pipefail
 
 DATA_DIR="${1:-data/vicos}"
+# Note: "JuiJuitsu" is the official path used by the ViCoS Lab server
+# (see DATA_SOURCES.md) — the unusual spelling is intentional on their end.
 IMAGES_URL="http://data.vicos.si/datasets/JuiJuitsu/images.zip"
 ANNOTATIONS_URL="http://data.vicos.si/datasets/JuiJuitsu/annotations.json"
 

@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -70,7 +71,6 @@ def load_vicos_annotations(data_dir: Path) -> tuple[np.ndarray, np.ndarray]:
         coco = json.load(fh)
 
     # Build a mapping from image_id → list of annotation dicts
-    from collections import defaultdict
     by_image: dict[int, list[dict]] = defaultdict(list)
     for ann in coco["annotations"]:
         by_image[ann["image_id"]].append(ann)

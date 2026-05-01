@@ -113,10 +113,14 @@ def _run_inference(job_id: str, video_path: str) -> None:
         _jobs[job_id]["results"] = results
         _jobs[job_id]["using_heuristic"] = inferrer.using_heuristic
         logger.info("Job %s done — %d entries", job_id, len(results))
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Job %s failed", job_id)
+    except (RuntimeError, OSError, ValueError) as exc:
+        logger.exception("Job %s failed: %s", job_id, exc)
         _jobs[job_id]["status"] = "error"
         _jobs[job_id]["error"] = str(exc)
+    except Exception as exc:  # pragma: no cover – surface unexpected errors clearly
+        logger.exception("Job %s: unexpected failure (%s)", job_id, type(exc).__name__)
+        _jobs[job_id]["status"] = "error"
+        _jobs[job_id]["error"] = f"{type(exc).__name__}: {exc}"
 
 
 # ---------------------------------------------------------------------------
