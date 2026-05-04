@@ -42,7 +42,7 @@ a:hover { text-decoration: underline; }
   border-bottom: 1px solid var(--border);
   padding: .85rem 1.5rem;
 }
-.header-inner { max-width: 960px; margin: 0 auto; }
+.header-inner { max-width: 1280px; margin: 0 auto; }
 .logo { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .logo-icon { font-size: 1.5rem; }
 .logo-text {
@@ -64,7 +64,7 @@ a:hover { text-decoration: underline; }
 /* ---- Main layout ---- */
 .main {
   flex: 1;
-  max-width: 960px;
+  max-width: 1280px;
   margin: 2rem auto;
   padding: 0 1.25rem;
   display: flex;
@@ -188,6 +188,95 @@ a:hover { text-decoration: underline; }
   color: #81c784;
 }
 
+/* ---- Debug overlay toggle ---- */
+.debug-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.debug-label {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: .9rem;
+}
+.debug-label input[type="checkbox"] { display: none; }
+.debug-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.debug-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform var(--transition), background var(--transition);
+}
+.debug-label input:checked ~ .debug-switch {
+  background: var(--accent);
+  border-color: var(--accent-dim);
+}
+.debug-label input:checked ~ .debug-switch::after {
+  transform: translateX(18px);
+  background: #111;
+}
+.debug-icon { font-size: 1rem; }
+.debug-toggle-text { font-size: .9rem; }
+.debug-hint { font-size: .78rem; color: var(--text-muted); font-style: italic; }
+
+/* ---- Two-column results layout ---- */
+.results-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.results-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.results-right {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Scrollable position log panel ---- */
+.log-panel {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  /* Match approximate video + debug-toggle + timeline height */
+  max-height: 680px;
+}
+.log-scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  /* Subtle inner shadow to indicate scrollability */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.log-scroll::-webkit-scrollbar { width: 5px; }
+.log-scroll::-webkit-scrollbar-track { background: transparent; }
+.log-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
 /* ---- Video ---- */
 .video-card { padding: 1rem; }
 .video-wrap { position: relative; display: inline-block; width: 100%; }
@@ -196,8 +285,21 @@ a:hover { text-decoration: underline; }
   border-radius: 6px;
   background: #000;
   display: block;
-  max-height: 540px;
+  max-height: 480px;
 }
+
+/* ---- Debug skeleton canvas ---- */
+.debug-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+/* ---- Position overlay (top-left of video) ---- */
 .pos-overlay {
   position: absolute;
   top: .75rem;
@@ -213,6 +315,31 @@ a:hover { text-decoration: underline; }
 }
 .overlay-label { font-weight: 700; font-size: 1rem; color: #fff; }
 .overlay-conf  { font-size: .8rem; color: rgba(255,255,255,.7); }
+
+/* ---- Heuristic debug info panel (bottom-right of video) ---- */
+.debug-info {
+  position: absolute;
+  bottom: 2.75rem;   /* above video controls bar */
+  right: .75rem;
+  padding: .5rem .75rem;
+  border-radius: 6px;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  font-size: .72rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: rgba(255,255,255,.85);
+  line-height: 1.55;
+  max-width: 300px;
+}
+.debug-info .debug-rule {
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: .25rem;
+  word-break: break-word;
+}
+.debug-info .debug-athlete-a1 { color: #ff8040; font-weight: 600; }
+.debug-info .debug-athlete-a2 { color: #40e080; font-weight: 600; }
 
 /* ---- Timeline ---- */
 .section-title { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; }
@@ -262,6 +389,10 @@ a:hover { text-decoration: underline; }
   font-weight: 600;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
 }
 .log-table td {
   padding: .45rem .75rem;
@@ -276,7 +407,7 @@ a:hover { text-decoration: underline; }
   gap: .5rem;
 }
 .conf-bar-bg {
-  width: 80px;
+  width: 56px;
   height: 6px;
   background: var(--surface-2);
   border-radius: 3px;
@@ -288,7 +419,7 @@ a:hover { text-decoration: underline; }
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: .8rem;
+  font-size: .75rem;
   font-weight: 600;
   color: #fff;
 }
@@ -308,3 +439,13 @@ a:hover { text-decoration: underline; }
 
 /* ---- Utility ---- */
 .hidden { display: none !important; }
+
+/* ---- Responsive: narrow screens stack columns ---- */
+@media (max-width: 900px) {
+  .results-layout {
+    grid-template-columns: 1fr;
+  }
+  .log-panel {
+    max-height: 360px;
+  }
+}

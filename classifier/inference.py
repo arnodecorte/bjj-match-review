@@ -81,12 +81,14 @@ def heuristic_classify(
     kps2: np.ndarray,
     box1: np.ndarray,
     box2: np.ndarray,
-) -> tuple[str, float]:
+) -> tuple[str, float, dict]:
     """
     Rule-based BJJ position classifier.
 
-    Returns (label, confidence) where confidence reflects how clearly
-    the geometry matches the rules (not a calibrated probability).
+    Returns (label, confidence, debug_info) where confidence reflects how
+    clearly the geometry matches the rules (not a calibrated probability) and
+    debug_info contains the intermediate geometry values and the rule that
+    fired — useful for the debug overlay in the web UI.
     """
     hip1 = (kps1[11, :2] + kps1[12, :2]) / 2
     hip2 = (kps2[11, :2] + kps2[12, :2]) / 2
@@ -103,19 +105,39 @@ def heuristic_classify(
     orient1 = _body_orientation(kps1)
     orient2 = _body_orientation(kps2)
 
+    debug: dict = {
+        "iou": round(iou, 3),
+        "orient_a1": round(orient1, 1),
+        "orient_a2": round(orient2, 1),
+        "norm_hip_diff": None,
+        "rule": "",
+    }
+
     # --- STANDING ---
     if iou < 0.25 and orient1 > 55 and orient2 > 55:
-        return "standing", 0.75
+        debug["rule"] = (
+            f"iou ({iou:.3f}) < 0.25 and "
+            f"orient_a1 ({orient1:.1f}°) > 55 and "
+            f"orient_a2 ({orient2:.1f}°) > 55 → standing"
+        )
+        return "standing", 0.75, debug
 
     # --- TAKEDOWN TRANSITION ---
     if iou < 0.45 and (orient1 < 45 or orient2 < 45):
         if orient1 >= orient2:
-            return "takedown_a1", 0.55
-        return "takedown_a2", 0.55
+            debug["rule"] = (
+                f"iou ({iou:.3f}) < 0.45 and orient_a1 ({orient1:.1f}°) < 45 → takedown_a1"
+            )
+            return "takedown_a1", 0.55, debug
+        debug["rule"] = (
+            f"iou ({iou:.3f}) < 0.45 and orient_a2 ({orient2:.1f}°) < 45 → takedown_a2"
+        )
+        return "takedown_a2", 0.55, debug
 
     # Both athletes are largely horizontal / grounded from here on
     hip_y_diff = float(hip1[1] - hip2[1])  # positive → A1 hips are lower
     norm_diff = hip_y_diff / avg_h
+    debug["norm_hip_diff"] = round(norm_diff, 3)
 
     # Determine who is on top (lower y-value = higher in frame = on top)
     a1_on_top = hip1[1] < hip2[1]
@@ -123,32 +145,42 @@ def heuristic_classify(
     # --- MOUNT (large vertical hip separation) ---
     if abs(norm_diff) > 0.45:
         label = "mount_a1" if a1_on_top else "mount_a2"
-        return label, 0.65
+        debug["rule"] = f"|Δhip/h| ({abs(norm_diff):.3f}) > 0.45 → {label}"
+        return label, 0.65, debug
 
     # --- SIDE CONTROL / TURTLE (moderate separation) ---
     if abs(norm_diff) > 0.20:
         # Check compactness of bottom athlete (turtle = very compact)
-        bottom_kps = kps1 if not a1_on_top else kps2
         compactness = (box1[2] - box1[0]) / (box1[3] - box1[1] + 1e-6)
         if a1_on_top:
             compactness = (box2[2] - box2[0]) / (box2[3] - box2[1] + 1e-6)
         if compactness > 1.2:
             label = "turtle_a2" if a1_on_top else "turtle_a1"
-            return label, 0.58
+            debug["rule"] = (
+                f"|Δhip/h| ({abs(norm_diff):.3f}) > 0.20 and "
+                f"compactness ({compactness:.2f}) > 1.2 → {label}"
+            )
+            return label, 0.58, debug
         label = "side_control_a1" if a1_on_top else "side_control_a2"
-        return label, 0.60
+        debug["rule"] = f"|Δhip/h| ({abs(norm_diff):.3f}) > 0.20 → {label}"
+        return label, 0.60, debug
 
     # --- GUARD FAMILY (small vertical separation, high overlap) ---
     if iou > 0.55:
         # Tightly interlocked → closed guard
         label = "closed_guard_a1" if a1_on_top else "closed_guard_a2"
-        return label, 0.55
+        debug["rule"] = f"iou ({iou:.3f}) > 0.55 → {label}"
+        return label, 0.55, debug
     if iou > 0.30:
         label = "open_guard_a1" if a1_on_top else "open_guard_a2"
-        return label, 0.50
+        debug["rule"] = f"iou ({iou:.3f}) > 0.30 → {label}"
+        return label, 0.50, debug
 
     # Default fallback
-    return "standing", 0.35
+    debug["rule"] = (
+        f"fallback (iou={iou:.3f}, orient_a1={orient1:.1f}°, orient_a2={orient2:.1f}°)"
+    )
+    return "standing", 0.35, debug
 
 
 # ---------------------------------------------------------------------------
@@ -341,7 +373,7 @@ class PositionInference:
         box1 = box_xyxy[top2[0]]
         box2 = box_xyxy[top2[1]]
 
-        label, confidence = self._classify(kps1, kps2, box1, box2, w, h)
+        label, confidence, debug_info = self._classify(kps1, kps2, box1, box2, w, h)
 
         return {
             "timestamp":    round(float(timestamp), 3),
@@ -349,6 +381,12 @@ class PositionInference:
             "display_name": DISPLAY_NAMES.get(label, label),
             "confidence":   round(float(confidence), 3),
             "color":        POSITION_COLORS.get(label, "#888"),
+            # Debug data used by the frontend debug overlay
+            "keypoints_a1": [[round(float(v), 1) for v in pt] for pt in kps1[:, :2].tolist()],
+            "keypoints_a2": [[round(float(v), 1) for v in pt] for pt in kps2[:, :2].tolist()],
+            "box_a1":       [round(float(v), 1) for v in box1.tolist()],
+            "box_a2":       [round(float(v), 1) for v in box2.tolist()],
+            "debug":        debug_info,
         }
 
     def _classify(
@@ -359,9 +397,10 @@ class PositionInference:
         box2: np.ndarray,
         img_w: int,
         img_h: int,
-    ) -> tuple[str, float]:
+    ) -> tuple[str, float, Optional[dict]]:
         if self._classifier is not None:
-            return self._ml_classify(kps1, kps2, img_w, img_h)
+            label, conf = self._ml_classify(kps1, kps2, img_w, img_h)
+            return label, conf, None
         return heuristic_classify(kps1, kps2, box1, box2)
 
     def _ml_classify(

@@ -68,43 +68,73 @@
     <!-- Results -->
     <section id="results-section" class="hidden">
 
-      <!-- Model banner -->
-      <div id="model-banner" class="model-banner"></div>
+      <!-- Two-column results layout -->
+      <div class="results-layout">
 
-      <!-- Video + overlay -->
-      <div class="card video-card">
-        <div class="video-wrap">
-          <video id="video-player" class="video-player" controls playsinline></video>
-          <div id="pos-overlay" class="pos-overlay hidden">
-            <span id="overlay-label" class="overlay-label"></span>
-            <span id="overlay-conf" class="overlay-conf"></span>
+        <!-- Left column: model banner + debug toggle + video + timeline -->
+        <div class="results-left">
+
+          <!-- Model banner -->
+          <div id="model-banner" class="model-banner"></div>
+
+          <!-- Debug overlay toggle -->
+          <div class="debug-toggle-row">
+            <label class="debug-label" for="debug-toggle">
+              <span class="debug-icon">🔬</span>
+              <span class="debug-toggle-text">Debug Overlay</span>
+              <input type="checkbox" id="debug-toggle" />
+              <span class="debug-switch"></span>
+            </label>
+            <span class="debug-hint">
+              Skeleton keypoints · athlete identity (A1 / A2) · heuristic reasoning
+            </span>
           </div>
-        </div>
-      </div>
 
-      <!-- Position timeline -->
-      <div class="card">
-        <h3 class="section-title">Position Timeline</h3>
-        <div id="timeline" class="timeline" role="img" aria-label="Position timeline"></div>
-        <div id="timeline-legend" class="timeline-legend"></div>
-      </div>
+          <!-- Video + canvas overlay + overlays -->
+          <div class="card video-card">
+            <div class="video-wrap">
+              <video id="video-player" class="video-player" controls playsinline></video>
+              <!-- Debug skeleton canvas (shown when debug mode is active) -->
+              <canvas id="debug-canvas" class="debug-canvas hidden"></canvas>
+              <!-- Current position overlay (top-left) -->
+              <div id="pos-overlay" class="pos-overlay hidden">
+                <span id="overlay-label" class="overlay-label"></span>
+                <span id="overlay-conf" class="overlay-conf"></span>
+              </div>
+              <!-- Heuristic debug info panel (bottom-right, debug mode only) -->
+              <div id="debug-info" class="debug-info hidden"></div>
+            </div>
+          </div>
 
-      <!-- Position log table -->
-      <div class="card">
-        <h3 class="section-title">Position Log</h3>
-        <div class="table-wrap">
-          <table class="log-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Position</th>
-                <th>Confidence</th>
-              </tr>
-            </thead>
-            <tbody id="log-body"></tbody>
-          </table>
-        </div>
-      </div>
+          <!-- Position timeline -->
+          <div class="card">
+            <h3 class="section-title">Position Timeline</h3>
+            <div id="timeline" class="timeline" role="img" aria-label="Position timeline"></div>
+            <div id="timeline-legend" class="timeline-legend"></div>
+          </div>
+
+        </div><!-- /results-left -->
+
+        <!-- Right column: scrollable position log -->
+        <div class="results-right">
+          <div class="card log-panel">
+            <h3 class="section-title">Position Log</h3>
+            <div class="log-scroll">
+              <table class="log-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Position</th>
+                    <th>Conf</th>
+                  </tr>
+                </thead>
+                <tbody id="log-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /results-right -->
+
+      </div><!-- /results-layout -->
 
       <!-- New analysis button -->
       <div class="center-row">

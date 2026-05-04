@@ -10,9 +10,10 @@
 // ---------------------------------------------------------------------------
 let currentJobId = null;
 let pollTimer = null;
-let positionLog = [];    // [{timestamp, position, display_name, confidence, color}]
+let positionLog = [];    // [{timestamp, position, display_name, confidence, color, keypoints_a1, keypoints_a2, box_a1, box_a2, debug}]
 let videoDuration = 0;
 let serverMeta = {};     // labels, colors, display_names from /api/meta
+let debugMode = false;
 
 // ---------------------------------------------------------------------------
 // DOM refs
@@ -41,6 +42,27 @@ const timelineEl      = $("timeline");
 const legendEl        = $("timeline-legend");
 const logBody         = $("log-body");
 const newBtn          = $("new-btn");
+const debugToggle     = $("debug-toggle");
+const debugCanvas     = $("debug-canvas");
+const debugInfoEl     = $("debug-info");
+
+// ---------------------------------------------------------------------------
+// COCO skeleton connections (17-point keypoint model)
+// ---------------------------------------------------------------------------
+const COCO_CONNECTIONS = [
+  [0, 1], [0, 2],                          // nose → eyes
+  [1, 3], [2, 4],                          // eyes → ears
+  [5, 6],                                  // shoulders
+  [5, 7], [7, 9],                          // left arm
+  [6, 8], [8, 10],                         // right arm
+  [5, 11], [6, 12],                        // torso sides
+  [11, 12],                                // hips
+  [11, 13], [13, 15],                      // left leg
+  [12, 14], [14, 16],                      // right leg
+];
+
+// Athlete colours: A1 = orange, A2 = green (mirrors the Python BGR values)
+const ATHLETE_COLORS = ["#ff6400", "#00c83c"];
 
 // ---------------------------------------------------------------------------
 // Bootstrap: fetch server metadata
@@ -138,12 +160,12 @@ async function poll() {
     if (!res.ok) return;
     const data = await res.json();
 
-    const pct = data.progress || 0;
-    progressBar.style.width = pct + "%";
-    progressLabel.textContent = pct + "%";
+    const progress = data.progress || 0;
+    progressBar.style.width = progress + "%";
+    progressLabel.textContent = progress + "%";
     const statusMessages = {
       queued:     "Queued — waiting for worker…",
-      processing: `Processing video (${pct}%)…`,
+      processing: `Processing video (${progress}%)…`,
       done:       "Done!",
       error:      "Error: " + (data.error || "unknown"),
     };
@@ -275,7 +297,153 @@ function highlightRow(index) {
 }
 
 // ---------------------------------------------------------------------------
-// Video timeupdate → position overlay
+// Debug overlay — skeleton canvas drawing
+// ---------------------------------------------------------------------------
+debugToggle.addEventListener("change", () => {
+  debugMode = debugToggle.checked;
+  if (!debugMode) {
+    clearDebugCanvas();
+    debugCanvas.classList.add("hidden");
+    debugInfoEl.classList.add("hidden");
+  } else {
+    // Draw immediately for the current video time
+    const entry = currentEntry(videoPlayer.currentTime);
+    if (entry) drawDebugOverlay(entry);
+  }
+});
+
+/**
+ * Return the pixel→canvas coordinate mapping for the current video element.
+ * Accounts for letterboxing when max-height clips the video.
+ */
+function getVideoRenderInfo() {
+  const vw = videoPlayer.videoWidth;
+  const vh = videoPlayer.videoHeight;
+  const ew = videoPlayer.clientWidth;
+  const eh = videoPlayer.clientHeight;
+  if (!vw || !vh || !ew || !eh) return null;
+  const scale = Math.min(ew / vw, eh / vh);
+  return {
+    scale,
+    offsetX: (ew - vw * scale) / 2,
+    offsetY: (eh - vh * scale) / 2,
+  };
+}
+
+function toCanvas(x, y, info) {
+  return [x * info.scale + info.offsetX, y * info.scale + info.offsetY];
+}
+
+function clearDebugCanvas() {
+  const ctx = debugCanvas.getContext("2d");
+  ctx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+}
+
+function drawDebugOverlay(entry) {
+  if (!debugMode || !entry) return;
+
+  const info = getVideoRenderInfo();
+  if (!info) return;
+
+  // Sync canvas pixel size with the video element's displayed size
+  debugCanvas.width  = videoPlayer.clientWidth;
+  debugCanvas.height = videoPlayer.clientHeight;
+  debugCanvas.classList.remove("hidden");
+
+  const ctx = debugCanvas.getContext("2d");
+  ctx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+
+  const athleteKps  = [entry.keypoints_a1, entry.keypoints_a2];
+  const athleteBoxes = [entry.box_a1, entry.box_a2];
+  const identities  = ["A1", "A2"];
+
+  athleteKps.forEach((kps, ai) => {
+    if (!kps || !kps.length) return;
+    const color = ATHLETE_COLORS[ai];
+
+    // --- Bounding box ---
+    if (athleteBoxes[ai] && athleteBoxes[ai].length === 4) {
+      const [bx1, by1, bx2, by2] = athleteBoxes[ai];
+      const [cx1, cy1] = toCanvas(bx1, by1, info);
+      const [cx2, cy2] = toCanvas(bx2, by2, info);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 3]);
+      ctx.strokeRect(cx1, cy1, cx2 - cx1, cy2 - cy1);
+      ctx.setLineDash([]);
+
+      // Identity badge (A1 / A2)
+      ctx.font = "bold 12px -apple-system, sans-serif";
+      const badgeText = identities[ai];
+      const tw = ctx.measureText(badgeText).width;
+      const bw = tw + 8, bh = 17;
+      ctx.fillStyle = color;
+      ctx.fillRect(cx1, cy1 - bh, bw, bh);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(badgeText, cx1 + 4, cy1 - 4);
+    }
+
+    // --- Skeleton connections ---
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    COCO_CONNECTIONS.forEach(([a, b]) => {
+      const pa = kps[a];
+      const pb = kps[b];
+      if (!pa || !pb) return;
+      const [ax, ay] = pa;
+      const [bx, by] = pb;
+      // Skip zero-confidence keypoints (YOLO sets undetected kps to 0,0)
+      if (ax === 0 && ay === 0) return;
+      if (bx === 0 && by === 0) return;
+      const [cax, cay] = toCanvas(ax, ay, info);
+      const [cbx, cby] = toCanvas(bx, by, info);
+      ctx.beginPath();
+      ctx.moveTo(cax, cay);
+      ctx.lineTo(cbx, cby);
+      ctx.stroke();
+    });
+
+    // --- Keypoint dots ---
+    kps.forEach(([x, y]) => {
+      if (x === 0 && y === 0) return;
+      const [cx, cy] = toCanvas(x, y, info);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+  });
+
+  // --- Heuristic debug info panel ---
+  const d = entry.debug;
+  if (d) {
+    const fmtNum = (v, dec) => (v !== null && v !== undefined) ? v.toFixed(dec) : "—";
+    const lines = [];
+    lines.push(`<span class="debug-athlete-a1">A1</span> orient: ${fmtNum(d.orient_a1, 1)}°`);
+    lines.push(`<span class="debug-athlete-a2">A2</span> orient: ${fmtNum(d.orient_a2, 1)}°`);
+    lines.push(`IoU: ${fmtNum(d.iou, 3)}`);
+    if (d.norm_hip_diff !== null && d.norm_hip_diff !== undefined) {
+      lines.push(`Δhip/h: ${fmtNum(d.norm_hip_diff, 3)}`);
+    }
+    if (d.rule) {
+      lines.push(`<span class="debug-rule">${escapeHtml(d.rule)}</span>`);
+    }
+    debugInfoEl.innerHTML = lines.map(l => `<div>${l}</div>`).join("");
+    debugInfoEl.classList.remove("hidden");
+  } else {
+    debugInfoEl.classList.add("hidden");
+  }
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// ---------------------------------------------------------------------------
+// Video timeupdate → position overlay + debug
 // ---------------------------------------------------------------------------
 videoPlayer.addEventListener("timeupdate", () => {
   const t = videoPlayer.currentTime;
@@ -286,13 +454,28 @@ videoPlayer.addEventListener("timeupdate", () => {
     overlayLabel.textContent = entry.display_name;
     overlayConf.textContent = pct(entry.confidence) + "%";
 
-    // Highlight corresponding row
+    // Highlight corresponding log row
     const idx = positionLog.indexOf(entry);
     if (idx >= 0) highlightRow(idx);
+
+    // Debug overlay
+    drawDebugOverlay(entry);
   } else {
     posOverlay.classList.add("hidden");
+    if (debugMode) {
+      clearDebugCanvas();
+      debugInfoEl.classList.add("hidden");
+    }
   }
 });
+
+// Re-draw debug overlay when the video is resized (e.g. window resize)
+new ResizeObserver(() => {
+  if (debugMode) {
+    const entry = currentEntry(videoPlayer.currentTime);
+    if (entry) drawDebugOverlay(entry);
+  }
+}).observe(videoPlayer);
 
 function currentEntry(time) {
   let result = null;
@@ -318,6 +501,11 @@ function reset() {
   uploadBtn.disabled = true;
   videoPlayer.src = "";
   posOverlay.classList.add("hidden");
+  debugMode = false;
+  debugToggle.checked = false;
+  clearDebugCanvas();
+  debugCanvas.classList.add("hidden");
+  debugInfoEl.classList.add("hidden");
   showUpload();
 }
 
