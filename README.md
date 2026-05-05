@@ -71,6 +71,49 @@ make train
 # python -m classifier.train --data-dir data/vicos --epochs 50 --output models/classifier.pt
 ```
 
+Engine upgrades in this branch:
+- Class-balanced sampling + weighted loss to reduce minority-class underfitting.
+- Early stopping (`--patience`) to avoid overtraining.
+- Optional mixed precision on CUDA (`--device cuda`) for faster epochs.
+- Keypoint augmentations for footage variance (camera shake, occlusion/confidence dropout, mirror flip, athlete swap, mild zoom jitter).
+- Metrics export to `models/*.metrics.json` for auditability.
+
+Quick smoke run before full training:
+
+```bash
+make train-quick
+```
+
+### 3. Phase 0 evaluation protocol (heuristic vs ML+engine)
+
+1. Pull a representative BJJ match video (gi or no-gi) into project root as `sample_match.mp4`.
+2. Run the evaluator:
+
+```bash
+make evaluate
+# or:
+# python scripts/evaluate_phase0.py --video sample_match.mp4 --model models/classifier.pt --output reports/phase0_eval.json
+```
+
+3. Compare proxy quality metrics in `reports/phase0_eval.json`:
+- `mean_confidence` and `high_confidence_rate` should increase.
+- `transition_rate` should decrease (less jitter).
+- `avg_segment_length` should increase (more stable phases).
+
+### 4. Expected training time on detected hardware
+
+Detected in this workspace:
+- CPU: Intel Xeon Silver 4114 (40 threads visible)
+- GPU: NVIDIA Quadro RTX 4000 (8 GB VRAM)
+
+Expected wall-clock for ViCoS full run (`120k` images, `50` epochs):
+- Data download + unzip: ~35-90 min (network dependent)
+- Annotation parse / tensor prep: ~5-12 min
+- Training on RTX 4000: ~20-45 min
+- Training on CPU only: ~2-4 hours
+
+End-to-end (including data download): typically ~1-2.5 hours on this machine.
+
 The server automatically loads `models/classifier.pt` on startup.
 Restart the server after training to switch from heuristic to ML mode.
 

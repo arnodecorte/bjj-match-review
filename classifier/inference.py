@@ -41,6 +41,9 @@ from .preprocess import (
 
 logger = logging.getLogger(__name__)
 
+_SMOOTH_WINDOW = 5
+_MIN_CONF_FOR_OVERRIDE = 0.45
+
 # BGR colours for the two athletes' skeletons
 _ATHLETE_COLORS: list[tuple[int, int, int]] = [
     (255, 100, 0),   # blue (A1)
@@ -316,6 +319,9 @@ class PositionInference:
         if progress_callback:
             progress_callback(1.0)
 
+        if results and not self._using_heuristic:
+            results = self._temporal_refine(results)
+
         return results
 
     # ------------------------------------------------------------------
@@ -447,6 +453,47 @@ class PositionInference:
             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2,
         )
 
+        return out
+
+    def _temporal_refine(self, results: list[dict]) -> list[dict]:
+        """
+        Smooth short-lived frame-to-frame prediction jitter.
+
+        This keeps primary transitions while reducing one-frame label spikes,
+        improving downstream control/event heuristics without retraining.
+        """
+        if len(results) < 3:
+            return results
+
+        labels = [r["position"] for r in results]
+        smoothed = labels[:]
+        radius = _SMOOTH_WINDOW // 2
+
+        # Pass 1: local majority vote for low-confidence frames.
+        for i, entry in enumerate(results):
+            if float(entry.get("confidence", 0.0)) >= _MIN_CONF_FOR_OVERRIDE:
+                continue
+            lo = max(0, i - radius)
+            hi = min(len(labels), i + radius + 1)
+            window = labels[lo:hi]
+            majority = max(set(window), key=window.count)
+            smoothed[i] = majority
+
+        # Pass 2: remove 1-frame islands between stable neighbours.
+        for i in range(1, len(smoothed) - 1):
+            if smoothed[i - 1] == smoothed[i + 1] != smoothed[i]:
+                smoothed[i] = smoothed[i - 1]
+
+        # Apply updates to result payload.
+        out: list[dict] = []
+        for entry, new_label in zip(results, smoothed):
+            updated = dict(entry)
+            if new_label != entry["position"]:
+                updated["raw_position"] = entry["position"]
+                updated["position"] = new_label
+                updated["display_name"] = DISPLAY_NAMES.get(new_label, new_label)
+                updated["color"] = POSITION_COLORS.get(new_label, "#888")
+            out.append(updated)
         return out
 
     @property
